@@ -7,6 +7,9 @@ edition = "2021"
 
 [dependencies]
 
+[dependencies.three-d]
+version = "0.16.4"
+features = ["window", "glutin_029" ]
 
 [dependencies.hg-lib]
 path = "../hg-lib"

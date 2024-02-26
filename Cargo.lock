@@ -1210,6 +1210,7 @@ dependencies = [
  "galileo",
  "galileo-types",
  "hg-lib",
+ "serde",
  "serde_json",
  "tokio",
 ]

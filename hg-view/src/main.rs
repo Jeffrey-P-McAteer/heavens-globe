@@ -4,8 +4,13 @@ use galileo::layer::vector_tile_layer::style::VectorTileStyle;
 use galileo::layer::vector_tile_layer::VectorTileLayer;
 use galileo::tile_scheme::{TileIndex, TileSchema, VerticalDirection};
 use galileo::{Lod, MapBuilder};
+use galileo::MapView;
 use galileo_types::cartesian::Point2d;
 use galileo_types::geo::Crs;
+use galileo_types::geo::ProjectionType;
+use galileo_types::geo::Datum;
+use galileo_types::geo::impls::GeoPoint2d;
+use galileo_types::geo::NewGeoPoint;
 use std::sync::{Arc, RwLock};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -59,6 +64,15 @@ pub async fn run(builder: MapBuilder, style: VectorTileStyle) {
     layer.write().unwrap().update_style(style);
 
     builder
+        .with_view(MapView::new_with_crs(
+            &GeoPoint2d::latlon(52.0, 10.0),
+            10_000.0,
+            Crs::new(
+                Datum::WGS84,
+                //ProjectionType::Other("laea lon_0=10 lat_0=52 x_0=4321000 y_0=3210000".into()),
+                ProjectionType::WebMercator,
+            ),
+        ))
         .with_layer(layer.clone())
         .with_event_handler(move |ev, map| match ev {
             UserEvent::Click(MouseButton::Left, mouse_event) => {

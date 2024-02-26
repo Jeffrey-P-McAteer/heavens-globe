@@ -6,10 +6,23 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["std", "derive"] }
 
-[dependencies.three-d]
-version = "0.16.4"
-features = ["window", "glutin_029" ]
+[dependencies.tokio]
+version = "1.36"
+features = ["full"]
+
+[dependencies.galileo]
+version = "0.1"
+
+[dependencies.galileo-types]
+version = "0.1"
+
+
+#[dependencies.three-d]
+#version = "0.16.4"
+#features = ["window", "glutin_029" ]
 
 [dependencies.hg-lib]
 path = "../hg-lib"

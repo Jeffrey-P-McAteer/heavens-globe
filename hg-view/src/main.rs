@@ -54,6 +54,8 @@ thread_local!(
 fn main() {
     let mut rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
+        //let event_loop = winit::event_loop::EventLoop::new().unwrap();
+
         run(MapBuilder::new(), get_layer_style().unwrap()).await;
     });
 }

@@ -1,125 +1,55 @@
+use eframe::egui;
 
-use galileo::control::{EventPropagation, MouseButton, UserEvent};
-use galileo::layer::vector_tile_layer::style::VectorTileStyle;
-use galileo::layer::vector_tile_layer::VectorTileLayer;
-use galileo::tile_scheme::{TileIndex, TileSchema, VerticalDirection};
-use galileo::{Lod, MapBuilder};
-use galileo::MapView;
-use galileo_types::cartesian::Point2d;
-use galileo_types::geo::Crs;
-use galileo_types::geo::ProjectionType;
-use galileo_types::geo::Datum;
-use galileo_types::geo::impls::GeoPoint2d;
-use galileo_types::geo::NewGeoPoint;
-use std::sync::{Arc, RwLock};
+fn main() -> Result<(), eframe::Error> {
+    //env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "My egui App",
+        options,
+        Box::new(|cc| {
+            // This gives us image support:
+            // egui_extras::install_image_loaders(&cc.egui_ctx);
 
-#[cfg(not(target_arch = "wasm32"))]
-use galileo::layer::{
-    data_provider::{FileCacheController, UrlDataProvider},
-    vector_tile_layer::tile_provider::{ThreadedProvider, VtProcessor},
-};
-
-#[cfg(not(target_arch = "wasm32"))]
-type VectorTileProvider =
-    ThreadedProvider<UrlDataProvider<TileIndex, VtProcessor, FileCacheController>>;
-
-#[cfg(target_arch = "wasm32")]
-use galileo::layer::vector_tile_layer::tile_provider::WebWorkerVectorTileProvider;
-use galileo_types::cartesian::Rect;
-
-#[cfg(target_arch = "wasm32")]
-type VectorTileProvider = WebWorkerVectorTileProvider;
-
-#[cfg(not(target_arch = "wasm32"))]
-fn get_layer_style() -> Option<VectorTileStyle> {
-    const STYLE: &str = "/j/proj/heavens-globe/misc_data/vt_style.json";
-    serde_json::from_reader(std::fs::File::open(STYLE).ok()?).ok()
+            Box::<MyApp>::default()
+        }),
+    )
 }
 
-thread_local!(
-    pub static LAYER: Arc<RwLock<VectorTileLayer<VectorTileProvider>>> =
-        Arc::new(RwLock::new(MapBuilder::create_vector_tile_layer(
-            |&index: &TileIndex| {
-                format!(
-                    "https://d1zqyi8v6vm8p9.cloudfront.net/planet/{}/{}/{}.mvt",
-                    index.z, index.x, index.y
-                )
-            },
-            tile_scheme(),
-            VectorTileStyle::default(),
-        )));
-);
-
-
-fn main() {
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async {
-        //let event_loop = winit::event_loop::EventLoop::new().unwrap();
-
-        run(MapBuilder::new(), get_layer_style().unwrap()).await;
-    });
+struct MyApp {
+    name: String,
+    age: u32,
 }
 
+impl Default for MyApp {
+    fn default() -> Self {
+        Self {
+            name: "Arthur".to_owned(),
+            age: 42,
+        }
+    }
+}
 
-pub async fn run(builder: MapBuilder, style: VectorTileStyle) {
-    let layer = LAYER.with(|v| v.clone());
-    layer.write().unwrap().update_style(style);
-
-    builder
-        .with_view(MapView::new_with_crs(
-            &GeoPoint2d::latlon(52.0, 10.0),
-            10_000.0,
-            Crs::new(
-                Datum::WGS84,
-                //ProjectionType::Other("laea lon_0=10 lat_0=52 x_0=4321000 y_0=3210000".into()),
-                ProjectionType::WebMercator,
-            ),
-        ))
-        .with_layer(layer.clone())
-        .with_event_handler(move |ev, map| match ev {
-            UserEvent::Click(MouseButton::Left, mouse_event) => {
-                let view = map.view().clone();
-                let position = map
-                    .view()
-                    .screen_to_map(mouse_event.screen_pointer_position)
-                    .unwrap();
-                let features = layer.read().unwrap().get_features_at(&position, &view);
-
-                for (layer, feature) in features {
-                    println!("{layer}, {:?}", feature.properties);
-                }
-
-                EventPropagation::Stop
+impl eframe::App for MyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("My egui Application");
+            ui.horizontal(|ui| {
+                let name_label = ui.label("Your name: ");
+                ui.text_edit_singleline(&mut self.name)
+                    .labelled_by(name_label.id);
+            });
+            ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
+            if ui.button("Increment").clicked() {
+                self.age += 1;
             }
-            _ => EventPropagation::Propagate,
-        })
-        .build()
-        .await
-        .run();
-}
+            ui.label(format!("Hello '{}', age {}", self.name, self.age));
 
-pub fn tile_scheme() -> TileSchema {
-    const ORIGIN: Point2d = Point2d::new(-20037508.342787, 20037508.342787);
-    const TOP_RESOLUTION: f64 = 156543.03392800014 / 4.0;
-
-    let mut lods = vec![Lod::new(TOP_RESOLUTION, 0).unwrap()];
-    for i in 1..16 {
-        lods.push(Lod::new(lods[(i - 1) as usize].resolution() / 2.0, i).unwrap());
-    }
-
-    TileSchema {
-        origin: ORIGIN,
-        bounds: Rect::new(
-            -20037508.342787,
-            -20037508.342787,
-            20037508.342787,
-            20037508.342787,
-        ),
-        lods: lods.into_iter().collect(),
-        tile_width: 1024,
-        tile_height: 1024,
-        y_direction: VerticalDirection::TopToBottom,
-        crs: Crs::EPSG3857,
+            /*ui.image(egui::include_image!(
+                "../../../crates/egui/assets/ferris.png"
+            ));*/
+        });
     }
 }
-
